@@ -47,10 +47,21 @@
 <script async src="https://docs.opencv.org/3.4.1/opencv.js" onload="main()"></script>
 <script>
 
-const bucketName = "data-set-creater";
-const s3 = new S3(bucketName);
+// URLにパラメータ指定（&folder=folderName）することでBucketにfolderを設定できる
+// folderNameは、あらかじめ作成しておく必要があります
+
+let folder = ''
+let param = location.search.substring(1).split('&');
+if(param[0].indexOf('folder=')==0){
+  folder = param[0].substring(7)
+}
+let bucketName = "my-bucket-name";
+
+const s3 = new S3(bucketName, folder);
 const thumbnail = new Thumbnail($('#thumbnail'));
-const manifest = new Manifest(bucketName)
+const manifest = new Manifest(bucketName, folder)
+
+
 
 let isSaving = false;
 // let width = 320;
@@ -117,16 +128,18 @@ async function save(){
 
   $("#saveButton").prop('disabled', true);
 
+  // ラベル取得
+  const labelName = $("#label").val();
+
   // 現在時刻からファイル名を作成する
   const dt = new Date();
   filename = `${dt.getTime()}`;
 
   // サムネイル画像の保存
   cv.resize(disp, thumbnailImg, new cv.Size(0,0), 0.05, 0.05, cv.INTER_NEAREST);
-  await s3.uploadImage('S_' + filename + '.jpg', thumbnailImg);
+  await s3.uploadImage('S_' + filename + '_' + labelName + '.jpg', thumbnailImg);
 
   // Manifestの保存する
-  const labelName = $("#label").val();
   await manifest.append(filename, width, height, labelName, detected, s3)
 
   // オリジナルの画像をS3に保存する （時間がかかるので非同期で保存）
@@ -195,7 +208,11 @@ async function main(){
   await thumbnail.refresh()
 
   // マニフェストURL表示
-  $('#manifestUrl').text(`s3://${bucketName}/manifest`)
+  if(folder!=''){
+    $('#manifestUrl').text(`s3://${bucketName}/${folder}/manifest`)
+  } else {
+    $('#manifestUrl').text(`s3://${bucketName}/manifest`)
+  }
   
   let color = new cv.Scalar(0, 0, 0);
   while(true){

@@ -1,6 +1,7 @@
 class Manifest {
-    constructor(budketName){
+    constructor(budketName, folder){
         this.budketName = budketName;
+        this.folder = folder;
         this.list = null;
     }
 
@@ -9,11 +10,15 @@ class Manifest {
         const files = await s3.getFiles();
         await Promise.all(files.map( async file => {
             if(file.indexOf('L_') === 0){
-                const filename = file.replace("L_","").replace(".jpg","") + ".json";
-                console.log(`filename:${filename}`)
-                const json = await s3.getText(filename);
-                if(json && json != ""){
-                    this.list += json + '\n';
+                const filename = file.replace("L_","").replace(".jpg","");
+                try {
+                    const json = await s3.getText(filename + '.json');
+                    if(json && json != ""){
+                        this.list += json + '\n';
+                    }
+                }catch(err){ // 無効データの削除
+                    await s3.delete('L_' + filename + '.jpg')
+                    await s3.delete('S_' + filename + '.jpg')
                 }
             }
         }))
@@ -46,8 +51,13 @@ class Manifest {
             )
         });
 
+        let imagename = img_name;
+        if(this.folder!=''){
+            imagename = this.folder + '/' + img_name;
+        } 
+
         const json = {
-            "source-ref": `s3://${this.budketName}/${img_name}`,
+            "source-ref": `s3://${this.budketName}/${imagename}`,
             "boxlabel": {
                 "annotations": annotations,
                 "image_size": [

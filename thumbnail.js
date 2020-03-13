@@ -11,11 +11,14 @@ class Thumbnail {
         await Promise.all(files.map( async file => {
             if(file.indexOf('S_') === 0){
                 const url = await s3.getSignedUrl(file);
-                const name = file.replace("S_","").replace(".jpg","");
+                const tmp = file.replace("S_","").replace(".jpg","").split('_');
+                const name = tmp[0];
+                const label = tmp[1];
                 const img = $("<img>");
                 img.attr("src",url);
                 const a = $("<a>");
                 a.attr("name", name);
+                a.attr('id', label);
                 a.on('click', this.cinfirm);
                 a.append(img);
                 this.control.append(a)
@@ -25,10 +28,11 @@ class Thumbnail {
 
     // 削除
     async cinfirm(){
-        const result = window.confirm(this.name + " を削除して宜しいですか");
+
+        const result = window.confirm(`${this.name} [${this.id}] を削除して宜しいですか`);
         if(result) {
             await s3.delete(this.name + '.json');
-            await s3.delete('S_' + this.name + '.jpg');
+            await s3.delete('S_' + this.name + '_' + this.id+ '.jpg');
             await s3.delete('L_' + this.name + '.jpg');
 
             // マニュフェスト初期化（既存のManifest取得）

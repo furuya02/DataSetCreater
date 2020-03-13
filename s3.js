@@ -1,12 +1,13 @@
 class S3 {
-    constructor(bucketName){
+    constructor(bucketName, folder){
         // 2020-03-12現在、us-east-1でないと、Rekognition Custom Labelsでデータセットに登録できない
         AWS.config.region = 'us-east-1';
         AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-            IdentityPoolId: 'us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx',
+            IdentityPoolId: 'us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
         });
         this.s3 = new AWS.S3({region: 'us-east-1'});
         this.bucketName = bucketName;
+        this.folder = folder;
     }
 
     async uploadImage(filename, image){
@@ -20,14 +21,14 @@ class S3 {
     async delete(filename){
         return this.s3.deleteObject({
             Bucket: this.bucketName,
-            Key: filename
+            Key: this._getKey(filename)
         }).promise();
     }
 
     async getText(filename){
         const response =  await this.s3.getObject({
             Bucket: this.bucketName, 
-            Key: filename
+            Key: this._getKey(filename)
         }).promise();
         return response.Body.toString("utf-8");
     }
@@ -40,7 +41,17 @@ class S3 {
       
         const files = [];
         result.Contents.forEach(content=>{
-          files.push(content.Key)
+            let path = '' + content.Key;
+            if(this.folder!=''){
+                if(path.indexOf(this.folder)==0){
+                    const filename = path.substr(this.folder.length + 1)
+                    if(filename != '') {
+                        files.push(filename)
+                    }
+                }
+            } else{
+                files.push(path)
+            }
         })
         return files.sort((a,b)=>{
           return (a < b ? 1 : -1);
@@ -50,20 +61,26 @@ class S3 {
     async getSignedUrl(key){
         return await this.s3.getSignedUrl('getObject', {
             Bucket: this.bucketName,
-            Key: key,
+            Key: this._getKey(key),
             Expires: 300})
     }
 
     async _upload(key, body){
         await this.s3.putObject({
             Bucket: this.bucketName,
-            Key: key,
+            Key: this._getKey(key),
             Body: body
           }).promise();
     }
 
+    _getKey(key){
+        if(this.folder!=''){
+            return this.folder + '/' + key;
+        }
+        return key;
+    }
+
     _createBlob(src){
-  
         var canvas = document.getElementById("tmpCanvas");
         cv.imshow("tmpCanvas", src);
         var type = 'image/jpeg';
