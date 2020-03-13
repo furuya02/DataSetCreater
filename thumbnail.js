@@ -28,9 +28,11 @@ class Thumbnail {
 
     // 削除
     async cinfirm(){
+        setBusy(true);
 
         const result = window.confirm(`${this.name} [${this.id}] を削除して宜しいですか`);
         if(result) {
+
             await s3.delete(this.name + '.json');
             await s3.delete('S_' + this.name + '_' + this.id+ '.jpg');
             await s3.delete('L_' + this.name + '.jpg');
@@ -39,6 +41,8 @@ class Thumbnail {
             await manifest.init(s3);
             // サムネイル表示
             await thumbnail.refresh()
+
         }
+        setBusy(false);
     }
 }

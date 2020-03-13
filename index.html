@@ -47,23 +47,22 @@
 <script async src="https://docs.opencv.org/3.4.1/opencv.js" onload="main()"></script>
 <script>
 
-// URLにパラメータ指定（&folder=folderName）することでBucketにfolderを設定できる
+// パラメータ取得
+// folder=folderName の形式でBucketにfolderを設定できる
 // folderNameは、あらかじめ作成しておく必要があります
-
 let folder = ''
 let param = location.search.substring(1).split('&');
 if(param[0].indexOf('folder=')==0){
   folder = param[0].substring(7)
 }
 let bucketName = "my-bucket-name";
-
 const s3 = new S3(bucketName, folder);
 const thumbnail = new Thumbnail($('#thumbnail'));
 const manifest = new Manifest(bucketName, folder)
 
 
 
-let isSaving = false;
+let isBusy = false;
 // let width = 320;
 // let height = 240;
 // let magnification = 1
@@ -124,9 +123,8 @@ function setCheckBox(id, val, func){
 
 async function save(){
 
-  isSaving = true;
+  setBusy(true);
 
-  $("#saveButton").prop('disabled', true);
 
   // ラベル取得
   const labelName = $("#label").val();
@@ -148,10 +146,17 @@ async function save(){
   // サムネイル一覧の表示
   await thumbnail.refresh()
 
-  isSaving = false;
+  setBusy(false);
+}
 
-  $("#saveButton").prop('disabled', false);
+function setBusy(flg){
+    isBusy = flg;
 
+    if(isBusy){
+      $("#saveButton").prop('disabled', true);
+    } else {
+      $("#saveButton").prop('disabled', false);
+    }
 }
 
 async function main(){
@@ -196,7 +201,6 @@ async function main(){
   tmpC1 = new cv.Mat(height, width, cv.CV_8UC1);
   tmpC3 = new cv.Mat(height, width, cv.CV_8UC3);
   tmpC4 = new cv.Mat(height, width, cv.CV_8UC4);
-  disp = new cv.Mat(height, width, cv.CV_8UC4);
   small = new cv.Mat();
   thumbnailImg = new cv.Mat();
   scaledFrame = new cv.Mat();
@@ -218,11 +222,14 @@ async function main(){
   while(true){
     try{
 
-      if(!isSaving){ // 保存処理中は、画像を更新しない
+      if(!isBusy){ // 保存処理中は、画像を更新しない
         vc.read(src);
       }
 
       // 表示用の画像を複製する
+      if(disp!=null){
+        delete disp;
+      }
       disp = src.clone();
       
       // 矩形検出は、解像度を1/10に下げた画像で処理する
@@ -248,6 +255,7 @@ async function main(){
           cv.rectangle(disp, rect[0], rect[1], color, 20);
       })
       detected = result;
+
       show("output", disp, magnification)
 
     }catch(err){

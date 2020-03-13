@@ -3,7 +3,7 @@ class S3 {
         // 2020-03-12現在、us-east-1でないと、Rekognition Custom Labelsでデータセットに登録できない
         AWS.config.region = 'us-east-1';
         AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-            IdentityPoolId: 'us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+            IdentityPoolId: 'us-east-1:xxxxxxxx-xxx-xxxx-xxxx-xxxxxxxxxxxx',
         });
         this.s3 = new AWS.S3({region: 'us-east-1'});
         this.bucketName = bucketName;
